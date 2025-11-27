@@ -1,0 +1,35 @@
+# Phase 1: 3GPP FTP Crawler Walkthrough
+
+## Overview
+We have successfully implemented the core crawler for the 3GPP FTP server. This crawler is designed to mirror specific meeting documents (TDocs, Reports) and Specifications to a local directory, which serves as the foundation for the "Prior Art Search Engine".
+
+## Changes Implemented
+-   **Crawler Module ([crawler/crawler.py](file:///C:/Users/aaron/.gemini/antigravity/brain/2a86ebd5-78a4-493c-80df-6842366fd007/crawler/crawler.py))**: Handles FTP connection, navigation, and "Delta Sync" (skipping existing files).
+-   **Configuration ([crawler/config.py](file:///C:/Users/aaron/.gemini/antigravity/brain/2a86ebd5-78a4-493c-80df-6842366fd007/crawler/config.py))**: Centralized config for FTP credentials and target paths.
+-   **Verification Script ([verify_crawler.py](file:///C:/Users/aaron/.gemini/antigravity/brain/2a86ebd5-78a4-493c-80df-6842366fd007/verify_crawler.py))**: Validates connectivity and directory listing.
+
+## Verification Results
+We ran a verification script to confirm the crawler can connect to `ftp.3gpp.org` and navigate to a specific meeting folder (`TSGR1_104-e`).
+
+### Test Output
+```text
+Testing FTP Connection...
+Connecting to ftp.3gpp.org...
+Connected successfully.
+PASS: Connection successful
+Disconnected.
+
+Testing Crawl (Dry Run / Listing)...
+Connecting to ftp.3gpp.org...
+Connected successfully.
+Listing contents of /tsg_ran/WG1_RL1/TSGR1_104-e/Report/...
+PASS: Successfully listed 2 items.
+First 3 items:
+06-07-21  07:52AM       <DIR>          Archive     
+06-07-21  07:52AM              1693998 Final_Minutes_report_RAN1#104-e_v100.zip
+Disconnected.
+```
+
+## Next Steps
+The crawler is ready to be integrated into the broader pipeline.
+-   **Phase 2**: We will build the "Refinery" to parse these downloaded files (Word/Zip) and extract clean text.
