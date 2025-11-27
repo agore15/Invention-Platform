@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass
 from typing import List, Optional
 from . import config
+from google.cloud import storage
 
 @dataclass
 class Target:
@@ -16,6 +17,13 @@ class ThreeGPPCrawler:
     def __init__(self):
         self.ftp = None
         self.connected = False
+        try:
+            self.storage_client = storage.Client()
+            self.bucket = self.storage_client.bucket(config.GCS_BUCKET_NAME)
+            print(f"Initialized GCS bucket: {config.GCS_BUCKET_NAME}")
+        except Exception as e:
+            print(f"Warning: Failed to initialize GCS client: {e}")
+            self.bucket = None
 
     def connect(self):
         """Connects to the 3GPP FTP server."""
@@ -51,6 +59,25 @@ class ThreeGPPCrawler:
             if local_size == remote_size:
                 return True
         return False
+
+    def upload_to_gcs(self, local_path: str, remote_path: str):
+        """Uploads a file to GCS."""
+        if not self.bucket:
+            return
+
+        try:
+            # Construct GCS blob path (remove local base dir prefix if present)
+            rel_path = os.path.relpath(local_path, config.BASE_DOWNLOAD_DIR)
+            # Normalize path separators to forward slashes for GCS
+            rel_path = rel_path.replace(os.sep, '/')
+            
+            blob = self.bucket.blob(rel_path)
+            
+            print(f"Uploading {rel_path} to GCS...")
+            blob.upload_from_filename(local_path)
+            print("Upload complete.")
+        except Exception as e:
+            print(f"Error uploading to GCS: {e}")
 
     def download_directory(self, remote_dir: str, local_dir: str):
         """Recursively downloads a directory from FTP."""
@@ -91,10 +118,12 @@ class ThreeGPPCrawler:
                         
                         if self._is_file_downloaded(local_path, remote_size):
                             print(f"Skipping {name} (already exists)")
+                            self.upload_to_gcs(local_path, remote_dir)
                         else:
                             print(f"Downloading {name}...")
                             with open(local_path, 'wb') as f:
                                 self.ftp.retrbinary(f"RETR {name}", f.write)
+                            self.upload_to_gcs(local_path, remote_dir)
         except Exception as e:
             print(f"Error downloading from {remote_dir}: {e}")
 
