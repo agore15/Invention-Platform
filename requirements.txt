@@ -1,0 +1,5 @@
+google-cloud-storage
+python-docx
+google-cloud-aiplatform
+rank_bm25
+numpy
