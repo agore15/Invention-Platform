@@ -90,3 +90,23 @@ class QueryProcessor:
                      enriched_query = pattern.sub(lambda m: f"{m.group(0)} ({acr})", enriched_query)
                      
         return enriched_query
+
+    def sanitize(self, query):
+        """
+        Sanitizes the query by extracting key terms and acronyms, 
+        discarding the original natural language structure.
+        """
+        # 1. Strip Legalese (removes stop words and common patent terms)
+        cleaned = self._strip_legalese(query)
+        
+        # 2. Inject Acronyms (adds (ACR) to definitions)
+        enriched = self._inject_acronyms(cleaned)
+        
+        # 3. Tokenize and deduplicate
+        # We want a list of significant tokens.
+        # Since _inject_acronyms returns a string, we split it.
+        # We might want to be more sophisticated here, but for now, 
+        # splitting by whitespace and keeping unique tokens is a good start.
+        tokens = list(set(enriched.split()))
+        
+        return tokens

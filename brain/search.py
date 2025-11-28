@@ -43,10 +43,12 @@ class HybridSearcher:
             
         print(f"Loaded {len(self.chunks)} chunks.")
 
-    def search(self, query: str, top_k: int = 5, alpha: float = 0.5) -> List[Dict[str, Any]]:
+    def search(self, query: str, top_k: int = 5, alpha: float = 0.5, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """
-        Performs hybrid search.
+        Performs hybrid search with optional metadata filtering.
         alpha: Weight for vector search (0.0 to 1.0). 1.0 = pure vector, 0.0 = pure keyword.
+        filters: Dictionary of metadata filters (e.g., {"type": "CR", "source": "Qualcomm"}).
+                 Values can be single values or lists (OR logic).
         """
         if not self.chunks:
             print("Index is empty.")
@@ -68,29 +70,49 @@ class HybridSearcher:
         else:
             query_vec = np.array(query_vectors[0].embedding)
             
-            # Cosine Similarity: (A . B) / (|A| * |B|)
-            # Assuming vectors are normalized? If not, we should normalize.
-            # For simplicity, let's just do dot product if normalized, or full cosine.
-            
             # Normalize query
             norm_q = np.linalg.norm(query_vec)
             if norm_q > 0:
                 query_vec = query_vec / norm_q
                 
             # Normalize doc vectors
-            # (Ideally pre-compute this)
             norm_docs = np.linalg.norm(self.vectors, axis=1)
-            # Avoid divide by zero
             norm_docs[norm_docs == 0] = 1
             
             normalized_vectors = self.vectors / norm_docs[:, np.newaxis]
             
             vector_scores = np.dot(normalized_vectors, query_vec)
-            # Clip to 0-1 (cosine similarity is -1 to 1, but for text usually 0-1)
             vector_scores = np.clip(vector_scores, 0, 1)
 
         # 3. Combine scores
         hybrid_scores = (1 - alpha) * bm25_scores + alpha * vector_scores
+        
+        # 4. Apply Filters
+        if filters:
+            for i, chunk in enumerate(self.chunks):
+                metadata = chunk.get("metadata", {})
+                match = True
+                for key, value in filters.items():
+                    # If filter value is None or empty list, ignore filter? No, assume strict.
+                    if not value: 
+                        continue
+                        
+                    if key not in metadata:
+                        match = False
+                        break
+                    
+                    meta_val = metadata[key]
+                    if isinstance(value, list):
+                        if meta_val not in value:
+                            match = False
+                            break
+                    else:
+                        if meta_val != value:
+                            match = False
+                            break
+                
+                if not match:
+                    hybrid_scores[i] = -1.0 # Exclude by setting negative score
         
         # Get top K
         top_indices = np.argsort(hybrid_scores)[::-1][:top_k]
@@ -107,9 +129,11 @@ class HybridSearcher:
                 
         return results
 
-if __name__ == "__main__":
-    # Test
-    searcher = HybridSearcher()
-    results = searcher.search("hello", top_k=2)
-    for res in results:
-        print(f"Score: {res['score']:.4f} | Text: {res['chunk']['text']}")
+    def get_unique_metadata_values(self, field: str) -> List[str]:
+        """Returns a sorted list of unique values for a given metadata field."""
+        values = set()
+        for chunk in self.chunks:
+            val = chunk.get("metadata", {}).get(field)
+            if val:
+                values.add(val)
+        return sorted(list(values))

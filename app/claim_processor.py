@@ -2,20 +2,35 @@ import json
 import re
 import os
 import sys
+import spacy
+from thefuzz import process
 
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+print("DEBUG: Loaded updated ClaimProcessor")
 
 class ClaimProcessor:
     def __init__(self, acronyms_file: str = "refinery/acronyms.json"):
         self.acronyms = {}
         self._load_acronyms(acronyms_file)
         
-        # Common patent legalese to strip
-        self.legalese = [
-            r"comprising", r"consisting of", r"wherein", r"characterized in that",
-            r"said", r"the method of claim \d+", r"according to claim \d+",
-            r"a plurality of", r"configured to", r"adapted to"
+        # Load SpaCy model
+        try:
+            self.nlp = spacy.load("en_core_web_sm")
+        except OSError:
+            print("Downloading spaCy model...")
+            from spacy.cli import download
+            download("en_core_web_sm")
+            self.nlp = spacy.load("en_core_web_sm")
+        
+        # Common patent legalese phrases (Regex for multi-word)
+        # Use word boundaries \b to avoid partial matches
+        self.legalese_phrases = [
+            r"\bcomprising\b", r"\bconsisting of\b", r"\bwherein\b", r"\bcharacterized in that\b",
+            r"\bsaid\b", r"\bthe method of claim \d+\b", r"\baccording to claim \d+\b",
+            r"\ba plurality of\b", r"\bconfigured to\b", r"\badapted to\b", r"\bmethod for\b",
+            r"\bsystem for\b", r"\bapparatus for\b", r"\bmethod\b", r"\bsystem\b", r"\bapparatus\b"
         ]
 
     def _load_acronyms(self, path: str):
@@ -28,47 +43,59 @@ class ClaimProcessor:
     def process_claim(self, claim_text: str) -> str:
         """
         Processes a raw patent claim into a search query.
-        1. Strips legalese.
-        2. Injects/Expands acronyms.
+        1. Strips legalese (Regex + SpaCy Stopwords).
+        2. Injects/Expands acronyms (Exact + Fuzzy).
         """
-        # 1. Strip Legalese
+        # print(f"DEBUG: Original: {claim_text}")
+        
+        # 1. Strip Legalese Phrases (Regex)
         cleaned_text = claim_text.lower()
-        for pattern in self.legalese:
+        for pattern in self.legalese_phrases:
             cleaned_text = re.sub(pattern, "", cleaned_text, flags=re.IGNORECASE)
         
-        # Remove extra whitespace
+        # print(f"DEBUG: After Regex: {cleaned_text}")
+        
+        # Normalize whitespace
         cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip()
+        # print(f"DEBUG: After Normalize: {cleaned_text}")
         
-        # 2. Acronym Injection (Simple expansion)
-        # For every word, if it matches an acronym key, append the definition
-        # or vice-versa. For search, maybe just appending the definition is good.
+        # 2. SpaCy Processing (Tokenization & Stopword Removal)
+        doc = self.nlp(cleaned_text)
         
-        # Tokenize
-        words = cleaned_text.split()
-        expanded_words = []
-        
-        # Common stopwords to ignore for acronym expansion
-        stopwords = {"to", "a", "an", "the", "in", "on", "at", "by", "for", "of", "and", "or", "is", "are"}
-
-        for word in words:
-            # Remove punctuation for lookup
-            clean_word = word.strip(".,;:()")
-            
-            # Skip stopwords
-            if clean_word.lower() in stopwords:
-                expanded_words.append(word)
+        # Keep only non-stop words
+        tokens = []
+        for token in doc:
+            if token.is_stop or token.is_punct or token.is_space:
                 continue
-
-            expanded_words.append(word)
-            
-            # Check upper case version for acronym lookup (keys are usually CAPS)
-            upper_word = clean_word.upper()
-            if upper_word in self.acronyms:
-                # Inject definition
-                definition = self.acronyms[upper_word]
-                expanded_words.append(f"({definition})")
+            # Explicitly filter common articles if spaCy misses them
+            if token.text.lower() in ["a", "an", "the"]:
+                continue
                 
-        final_query = " ".join(expanded_words)
+            tokens.append(token.text)
+        
+        # print(f"DEBUG: Tokens after SpaCy: {tokens}")
+        
+        # 3. Acronym Injection
+        final_tokens = []
+        for token in tokens:
+            final_tokens.append(token)
+            
+            # Check for acronym
+            upper_token = token.upper()
+            
+            # Exact Match
+            if upper_token in self.acronyms:
+                final_tokens.append(f"({self.acronyms[upper_token]})")
+            else:
+                # Fuzzy Match (only if length > 2 to avoid noise)
+                if len(upper_token) > 2:
+                    # Get best match with score > 80
+                    match = process.extractOne(upper_token, self.acronyms.keys(), score_cutoff=80)
+                    if match:
+                        acronym, score = match
+                        final_tokens.append(f"({self.acronyms[acronym]})")
+
+        final_query = " ".join(final_tokens)
         return final_query
 
 if __name__ == "__main__":

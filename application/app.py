@@ -14,6 +14,7 @@ def main():
 
     # Sidebar
     st.sidebar.header("Filters")
+    sanitized_mode = st.sidebar.toggle("Sanitized Mode", value=True)
     status_filter = st.sidebar.multiselect("Status", ["Agreed", "Not Agreed", "Draft"])
     source_filter = st.sidebar.text_input("Source (e.g., Qualcomm)")
 
@@ -32,14 +33,19 @@ def main():
 
         # Process Query
         processor = QueryProcessor()
-        processed_query = processor.process(prompt)
+        
+        if sanitized_mode:
+            processed_query = processor.sanitize(prompt)
+            st.info(f"Sanitized Query Tokens: {processed_query}")
+        else:
+            processed_query = processor.process(prompt)
+            st.info(f"Processed Query: {processed_query}")
         
         with st.chat_message("assistant"):
-            st.info(f"Processed Query: {processed_query}")
             
             # Search
             engine = SearchEngine()
-            results = engine.search(processed_query, filters={"status": status_filter, "source": source_filter})
+            results = engine.search(str(processed_query), filters={"status": status_filter, "source": source_filter})
             
             response = engine.generate_answer(results, processed_query)
             st.markdown(response)

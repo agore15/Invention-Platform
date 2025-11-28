@@ -9,6 +9,8 @@ from typing import List, Dict, Optional
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from refinery.classifier import DocumentClassifier
+
 @dataclass
 class Chunk:
     text: str
@@ -22,6 +24,7 @@ class TDocParser:
         self.content = ""
         self.chunks: List[Chunk] = []
         self.cr_fields = {}
+        self.classifier = DocumentClassifier()
 
     def parse(self):
         """Main parsing method."""
@@ -34,6 +37,9 @@ class TDocParser:
             self._extract_metadata()
             self._extract_cr_fields()
             self._extract_body_text_and_chunks()
+            
+            doc_type = self.classifier.classify(self.content, self.metadata)
+            self.metadata["type"] = doc_type
             
             return {
                 "metadata": self.metadata,
