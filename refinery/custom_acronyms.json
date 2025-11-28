@@ -1,0 +1,8 @@
+{
+    "DEVICE-TO-DEVICE": "Sidelink",
+    "D2D": "Sidelink",
+    "SIDELINK CONTROL CHANNEL": "PSCCH",
+    "SENSING WINDOW": "sensing",
+    "V2X": "Vehicle-to-Everything",
+    "PC5": "Sidelink Interface"
+}

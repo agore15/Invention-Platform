@@ -43,12 +43,12 @@ class HybridSearcher:
             
         print(f"Loaded {len(self.chunks)} chunks.")
 
-    def search(self, query: str, top_k: int = 5, alpha: float = 0.5, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    def search(self, query: str, top_k: int = 5, alpha: float = 0.5, filters: Dict[str, Any] = None, must_have_terms: List[str] = None) -> List[Dict[str, Any]]:
         """
-        Performs hybrid search with optional metadata filtering.
+        Performs hybrid search with optional metadata filtering and content constraints.
         alpha: Weight for vector search (0.0 to 1.0). 1.0 = pure vector, 0.0 = pure keyword.
         filters: Dictionary of metadata filters (e.g., {"type": "CR", "source": "Qualcomm"}).
-                 Values can be single values or lists (OR logic).
+        must_have_terms: List of strings. If provided, returned docs MUST contain at least one of these terms (case-insensitive).
         """
         if not self.chunks:
             print("Index is empty.")
@@ -87,13 +87,12 @@ class HybridSearcher:
         # 3. Combine scores
         hybrid_scores = (1 - alpha) * bm25_scores + alpha * vector_scores
         
-        # 4. Apply Filters
+        # 4. Apply Filters (Metadata)
         if filters:
             for i, chunk in enumerate(self.chunks):
                 metadata = chunk.get("metadata", {})
                 match = True
                 for key, value in filters.items():
-                    # If filter value is None or empty list, ignore filter? No, assume strict.
                     if not value: 
                         continue
                         
@@ -112,9 +111,30 @@ class HybridSearcher:
                             break
                 
                 if not match:
-                    hybrid_scores[i] = -1.0 # Exclude by setting negative score
+                    hybrid_scores[i] = -1.0 # Exclude
         
+        # 5. Apply Content Constraints (Must-Have Terms)
+        if must_have_terms:
+            # Pre-compute lower case terms
+            terms_lower = [t.lower() for t in must_have_terms]
+            for i, chunk in enumerate(self.chunks):
+                # Skip if already excluded
+                if hybrid_scores[i] < 0:
+                    continue
+                
+                text_lower = chunk['text'].lower()
+                has_term = False
+                for term in terms_lower:
+                    if term in text_lower:
+                        has_term = True
+                        break
+                
+                if not has_term:
+                    hybrid_scores[i] = -1.0 # Exclude
+
         # Get top K
+        # Fetch more candidates if filtering might have reduced the pool? 
+        # Actually we filtered by setting score to -1, so sorting will push them to bottom.
         top_indices = np.argsort(hybrid_scores)[::-1][:top_k]
         
         results = []
