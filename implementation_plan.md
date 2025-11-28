@@ -1,42 +1,53 @@
-# Implementation Plan - Phase 1: 3GPP FTP Crawler
+# Implementation Plan: 3GPP AI Prior Art Search Engine (SOW v2)
 
 ## Goal
-Build a lightweight, robust crawler to mirror specific 3GPP documents (TDocs, Meeting Reports, Specifications) from `ftp.3gpp.org` to a local directory (simulating Cloud Storage for this phase). This data will later be used to build a claim chart against private user inventions.
+Build a "Claim-to-Search" engine that ingests 3GPP documents, understands technical vocabulary, and retrieves evidence to validate Standard Essential Patents (SEPs).
 
 ## User Review Required
 > [!IMPORTANT]
-> **Privacy & Data Flow**: The crawler only fetches **public** data from 3GPP. No private user data (claims/inventions) is involved in the crawling process. The matching/search (Phase 3 & 4) will happen entirely within your secure environment using this downloaded data.
+> **Refinery Complexity:** Parsing "Reason for Change" from Word tables and handling "Track Changes" are high-risk tasks requiring significant testing.
+> **Claim-to-Search Logic:** The quality of retrieval depends heavily on the accuracy of the "Legalese Stripper" and "Acronym Injection" modules.
 
 ## Proposed Changes
 
-### [Crawler Module]
-We will create a new Python module `crawler` with the following structure:
+### Phase 1: Data Ingestion (Crawler) - *Completed*
+- [x] Crawler for TDocs and Reports
+- [x] GCS Integration (`invention-platform-data-001`)
 
-#### [NEW] [crawler.py](file:///C:/Users/aaron/.gemini/antigravity/brain/2a86ebd5-78a4-493c-80df-6842366fd007/crawler/crawler.py)
--   Main entry point.
--   Handles FTP connection and navigation.
--   Implements "Delta Sync" (checking file timestamps/sizes before downloading).
--   **Key Classes**:
-    -   `ThreeGPPCrawler`: Main class to manage the FTP session.
-    -   `Target`: Data class to define what to crawl (e.g., "RAN1", "Meeting 104", "TDocs").
+### Phase 2: The Refinery (Parsing & Cleaning)
+#### [NEW] `refinery/vocabulary.py`
+- Ingest TR 21.905 (Vocabulary) to build a Python dictionary of acronyms.
+- Output: `acronyms.json`
 
-#### [NEW] [config.py](file:///C:/Users/aaron/.gemini/antigravity/brain/2a86ebd5-78a4-493c-80df-6842366fd007/crawler/config.py)
--   Configuration for FTP URL, target directories, and local download paths.
+#### [NEW] `refinery/parser.py`
+- Implement `python-docx` logic to parse Word documents.
+- **Track Changes:** Logic to "accept all changes" (or extract final text).
+- **CR Extraction:** specialized logic to find and extract "Reason for Change" and "Summary of Change" tables from Change Requests.
+- **Metadata:** Extract TDoc #, Source, Date, Meeting ID.
 
-### Targets
-Based on initial exploration, the crawler will target:
-1.  **TDocs (Contributions)**: `ftp/tsg_{wg}/WG{n}_RL{n}/TSG{wg}_{meeting}/Docs/`
-2.  **Meeting Reports**: `ftp/tsg_{wg}/WG{n}_RL{n}/TSG{wg}_{meeting}/Report/`
-3.  **Specifications (TS)**: `ftp/Specs/archive/{series}_series/` (and potentially latest versions in `ftp/Specs/`)
+### Phase 3: The Brain (Vectorization)
+#### [NEW] `brain/indexer.py`
+- **Chunking:** Semantic chunking (by paragraph/section).
+- **Embedding:** Use Vertex AI `text-embedding-004`.
+- **Indexing:** Store in Vertex AI Vector Search (or Pinecone for MVP).
+- **Hybrid Search:** Implement BM25 + Vector Search.
+
+### Phase 4: The Application (Claim-to-Search UI)
+#### [NEW] `app/claim_processor.py`
+- **Legalese Stripper:** Use `spaCy` to remove patent stop-words ("comprising", "plurality of").
+- **Acronym Injection:** Expand terms using `acronyms.json` (e.g., "UE" -> "User Equipment").
+
+#### [NEW] `app/ui.py`
+- Streamlit interface for users to input claims.
+- Display retrieved TDocs with "Reason for Change" highlighted.
 
 ## Verification Plan
 
 ### Automated Tests
--   Unit tests for the `Delta Sync` logic (mocking FTP responses).
--   Integration test: Connect to 3GPP FTP and list files in a known directory (e.g., a specific meeting folder) without downloading everything.
+- **Parser Tests:** Unit tests for `refinery/parser.py` using sample CRs with known "Reason for Change" content.
+- **Vocabulary Tests:** Verify that common acronyms (UE, gNB) are correctly extracted from TR 21.905.
+- **Search Tests:** "Golden Set" evaluation—input a known patent claim and verify the correct TDoc is in the top 10 results.
 
 ### Manual Verification
--   Run the crawler for a **single specific meeting** (e.g., RAN1#104-e) to verify it correctly downloads:
-    -   TDocs (.zip/.doc)
-    -   Report (.zip/.doc)
--   Verify folder structure is preserved locally.
+- Review parsed JSON output for complex CRs to ensure table structure is preserved.
+- Test the UI with real patent claims to validate the "Claim-to-Search" translation.
