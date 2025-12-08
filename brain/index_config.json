@@ -1,0 +1,10 @@
+{
+    "config": {
+        "dimensions": 768,
+        "algorithmConfig": {
+            "bruteForceConfig": {}
+        },
+        "distanceMeasureType": "DOT_PRODUCT_DISTANCE"
+    },
+    "contentsDeltaUri": "gs://invention-platform-data-001/vector_search_staging/"
+}

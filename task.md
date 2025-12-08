@@ -39,10 +39,21 @@
 - [x] Implement CR Cover Sheet Extraction <!-- id: 26 -->
 - [x] Verify Parser with Samples <!-- id: 27 -->
 
+# Phase 5: Deployment
+- [x] Update Dockerfile <!-- id: 34 -->
+- [x] Deploy to Cloud Run <!-- id: 35 -->
+- [x] Verify Cloud Run URL <!-- id: 36 -->
+
+# Phase 6: Cloud Automation
+- [x] Update requirements.txt with job deps <!-- id: 40 -->
+- [x] Deploy Crawler Cloud Run Job <!-- id: 41 -->
+- [x] Deploy Pipeline Cloud Run Job <!-- id: 42 -->
+- [x] Schedule Jobs <!-- id: 43 -->
+
 # Phase 3: The Brain (Vector Search)
 - [ ] Configure Vertex AI (Project/Location) <!-- id: 28 -->
 - [ ] Implement Semantic Chunking <!-- id: 29 -->
 - [ ] Complete Embedding Generator <!-- id: 30 -->
 - [ ] Implement Vector Search Indexer <!-- id: 31 -->
 - [ ] Implement Hybrid Searcher <!-- id: 32 -->
-- [ ] Verify Search Pipeline <!-- id: 33 -->
+- [x] Verify Search Pipeline <!-- id: 33 -->

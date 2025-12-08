@@ -1,6 +1,11 @@
-google-cloud-storage
-python-docx
-google-cloud-aiplatform
-rank_bm25
-numpy
 streamlit
+google-cloud-aiplatform
+google-cloud-firestore
+google-cloud-storage
+spacy==3.8.2
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0.tar.gz
+numpy
+
+requests
+python-docx
+mcp

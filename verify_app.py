@@ -8,24 +8,25 @@ from app.claim_processor import ClaimProcessor
 from brain.search import HybridSearcher
 
 def verify_flow():
-    print("Initializing components...")
+    print('Initializing components...')
     processor = ClaimProcessor()
     searcher = HybridSearcher()
     
-    claim = "A method comprising a UE configured to transmit a PUSCH to a gNB."
-    print(f"\nInput Claim: {claim}")
+    claim = 'A method comprising a UE configured to transmit a PUSCH to a gNB.'
+    print(f'\nInput Claim: {claim}')
     
     # 1. Process
-    query = processor.process_claim(claim)
-    print(f"Processed Query: {query}")
+    query, constraints = processor.process_claim(claim)
+    print(f'Processed Query: {query}')
+    print(f'Constraints: {constraints}')
     
     # 2. Search
-    print("\nSearching...")
-    results = searcher.search(query, top_k=5)
+    print('\nSearching...')
+    results = searcher.search(query, top_k=5, must_have_terms=constraints)
     
-    print(f"\nFound {len(results)} results.")
+    print(f'\nFound {len(results)} results.')
     for i, res in enumerate(results):
-        print(f"{i+1}. Score: {res['score']:.4f} | Text: {res['chunk']['text'][:50]}...")
+        print(f'{i+1}. Score: {res['score']:.4f} | Text: {res['chunk']['text'][:50]}...')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     verify_flow()

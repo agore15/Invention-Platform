@@ -41,6 +41,15 @@ Build a "Claim-to-Search" engine that ingests 3GPP documents, understands techni
 - Streamlit interface for users to input claims.
 - Display retrieved TDocs with "Reason for Change" highlighted.
 
+### Phase 5: Deployment
+#### [NEW] Dockerfile
+- Docker configuration for the Streamlit app.
+- Base image: python:3.11-slim
+
+#### [NEW] Cloud Run
+- Deploy the containerized application to Google Cloud Run.
+- Ensure access to Vertex AI and Firestore via Service Account.
+
 ## Verification Plan
 
 ### Automated Tests

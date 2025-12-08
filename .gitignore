@@ -7,3 +7,12 @@ env/
 venv/
 data/
 .DS_Store
+
+
+# Generated artifacts
+source.zip
+*.log
+*.zip
+brain/index.json
+test_write.txt
+debug_gapic_search.py
