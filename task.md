@@ -50,6 +50,10 @@
 - [x] Deploy Pipeline Cloud Run Job <!-- id: 42 -->
 - [x] Schedule Jobs <!-- id: 43 -->
 
+# Phase 7: Privacy & Security
+- [x] Implement Query Hashing (Zero Retention) <!-- id: 44 -->
+- [x] Configure Log Exclusion Filters <!-- id: 45 -->
+
 # Phase 3: The Brain (Vector Search)
 - [ ] Configure Vertex AI (Project/Location) <!-- id: 28 -->
 - [ ] Implement Semantic Chunking <!-- id: 29 -->
